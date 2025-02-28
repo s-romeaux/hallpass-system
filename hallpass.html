@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall Pass System</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        function handleCredentialResponse(response) {
+            const jwt = response.credential;
+            fetch("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + jwt)
+                .then(res => res.json())
+                .then(user => {
+                    if (user.email_verified) {
+                        document.getElementById("login-container").style.display = "none";
+                        document.getElementById("hall-pass-form").style.display = "block";
+                        document.getElementById("user-name").innerText = user.name;
+                    } else {
+                        alert("Google login failed!");
+                    }
+                });
+        }
+
+        function submitHallPass() {
+            const student = document.getElementById("student").value;
+            const teacher = document.getElementById("teacher").value;
+            const destination = document.getElementById("destination").value;
+            const reason = document.getElementById("reason").value;
+
+            if (!student || !teacher || !destination) {
+                alert("Please fill out all required fields.");
+                return;
+            }
+
+            const data = {
+                student, teacher, destination, reason, timestamp: new Date().toLocaleString()
+            };
+
+            fetch("https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec", {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.text())
+            .then(() => {
+                alert("Hall pass submitted!");
+                printHallPass(data);
+            })
+            .catch(err => console.error("Error:", err));
+        }
+
+        function printHallPass(data) {
+            const passContent = `
+                <pre style="font-size:16px">
+                HALL PASS
+                ----------------------
+                Student: ${data.student}
+                Teacher: ${data.teacher}
+                Destination: ${data.destination}
+                Reason: ${data.reason}
+                Issued: ${data.timestamp}
+                ----------------------
+                </pre>
+                <script>window.print();</script>`;
+            const printWindow = window.open("", "_blank");
+            printWindow.document.write(passContent);
+            printWindow.document.close();
+        }
+    </script>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Sign in to Access Hall Pass System</h2>
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID"
+             data-callback="handleCredentialResponse">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
+    </div>
+
+    <div id="hall-pass-form" style="display:none;">
+        <h2>Welcome, <span id="user-name"></span>!</h2>
+        <h3>Issue a Hall Pass</h3>
+        <label>Student Name: <input type="text" id="student" required></label><br>
+        <label>Teacher Name: <input type="text" id="teacher" required></label><br>
+        <label>Destination: 
+            <select id="destination">
+                <option value="Restroom">Restroom</option>
+                <option value="Nurse">Nurse</option>
+                <option value="Office">Office</option>
+            </select>
+        </label><br>
+        <label>Reason: <input type="text" id="reason"></label><br>
+        <button onclick="submitHallPass()">Submit & Print</button>
+    </div>
+</body>
+</html>
